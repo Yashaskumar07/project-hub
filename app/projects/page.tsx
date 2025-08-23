@@ -1,12 +1,15 @@
 // app/projects/page.tsx
 "use client";
-
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<any[]>([]);
+
+const router = useRouter();
+
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -75,6 +78,14 @@ export default function ProjectsPage() {
           </motion.div>
         ))}
       </motion.div>
+      <div className="mt-8 flex justify-center">
+      <button
+        onClick={() => router.back()}
+        className="bg-white hover:bg-gray-300 text-gray-800 font-medium px-6 py-2 rounded-lg shadow transition duration-200"
+      >
+        ← Back
+      </button>
+    </div>
     </div>
   );
 }

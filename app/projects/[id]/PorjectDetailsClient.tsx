@@ -9,6 +9,7 @@ interface Project {
   domain?: string;
   github?: string;
   demo?: string;
+  image?: string; // ✅ add image field
 }
 
 export default function ProjectDetailsClient({ project }: { project: Project }) {
@@ -19,6 +20,18 @@ export default function ProjectDetailsClient({ project }: { project: Project }) 
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
     >
+      {/* ✅ Image Preview */}
+      {project.image && (
+        <motion.img
+          src={project.image}
+          alt={project.title}
+          className="w-full h-64 object-cover rounded-xl shadow-md mb-6"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.1, duration: 0.5 }}
+        />
+      )}
+
       <motion.h1
         className="text-3xl font-bold text-gray-900"
         initial={{ opacity: 0, scale: 0.8 }}

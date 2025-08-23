@@ -1,14 +1,41 @@
 import { NextResponse } from "next/server";
-import { connectToDB } from "@/lib/mongodb";  // ✅ use mongoose connection
+import { connectToDB } from "@/lib/mongodb";
 import Project from "@/models/Project";
+import path from "path";
+import { promises as fs } from "fs";
 
-// POST - Create new project
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { title, description, tags, difficulty, status, githubLink, images } = body;
+    // ✅ Parse multipart/form-data
+    const formData = await req.formData();
 
-    if (!title || !description || !tags || !difficulty) {
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string;
+    const tags = (formData.get("tags") as string)?.split(",").map(t => t.trim()) || [];
+    const difficulty = formData.get("difficulty") as string;
+    const status = formData.get("status") as string;
+    const github = formData.get("github") as string;
+    const demo = formData.get("demo") as string;
+
+    // ✅ Handle image file
+    const file = formData.get("image") as File | null;
+    let imageUrl = "";
+
+    if (file) {
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+
+      // Save to public/uploads
+      const uploadDir = path.join(process.cwd(), "public", "uploads");
+      await fs.mkdir(uploadDir, { recursive: true });
+
+      const filePath = path.join(uploadDir, file.name);
+      await fs.writeFile(filePath, buffer);
+
+      imageUrl = `/uploads/${file.name}`;
+    }
+
+    if (!title || !description || !difficulty) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -20,8 +47,9 @@ export async function POST(req: Request) {
       tags,
       difficulty,
       status,
-      githubLink,
-      images,
+      github,
+      demo,
+      image: imageUrl,
     });
 
     return NextResponse.json(
@@ -29,6 +57,7 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (error: any) {
+    console.error("Upload Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

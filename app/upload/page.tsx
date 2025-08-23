@@ -11,21 +11,42 @@ export default function UploadProject() {
     description: "",
     github: "",
     demo: "",
+    tags: "",
+    difficulty: "",
+    status: "",
   });
 
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      setPreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const formData = new FormData();
+    Object.entries(form).forEach(([key, value]) => {
+      formData.append(key, value);
+    });
+    if (imageFile) formData.append("image", imageFile);
+
     await fetch("/api/projects", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: formData,
     });
+
     alert("✅ Project uploaded!");
   };
 
@@ -46,12 +67,14 @@ export default function UploadProject() {
         🚀 Upload Your Project
       </motion.h1>
 
+      {/* Basic Inputs */}
       {[
         { name: "title", placeholder: "Project Title" },
         { name: "domain", placeholder: "Domain (AI, Web, IoT...)" },
         { name: "shortDescription", placeholder: "Short Description" },
         { name: "github", placeholder: "GitHub Repo Link" },
         { name: "demo", placeholder: "Live Demo Link (Optional)" },
+        { name: "tags", placeholder: "Tags (comma separated: AI, Web, IoT...)" },
       ].map((field, idx) => (
         <motion.input
           key={field.name}
@@ -66,6 +89,60 @@ export default function UploadProject() {
         />
       ))}
 
+      {/* Difficulty */}
+      <motion.select
+        name="difficulty"
+        className="w-full border p-3 rounded-xl text-gray-800 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        onChange={handleChange}
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.7 }}
+      >
+        <option value="">Select Difficulty</option>
+        <option value="Beginner">Beginner</option>
+        <option value="Intermediate">Intermediate</option>
+        <option value="Advanced">Advanced</option>
+      </motion.select>
+
+      {/* Status */}
+      <motion.select
+        name="status"
+        className="w-full border p-3 rounded-xl text-gray-800 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        onChange={handleChange}
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.8 }}
+      >
+        <option value="">Select Status</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Completed">Completed</option>
+        <option value="Planned">Planned</option>
+      </motion.select>
+
+      {/* Image Upload */}
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.9 }}
+        className="space-y-2"
+      >
+        <label className="block text-gray-700 font-medium">Project Image</label>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+          className="w-full border p-3 rounded-xl shadow-sm bg-white"
+        />
+        {preview && (
+          <img
+            src={preview}
+            alt="Preview"
+            className="mt-2 w-full h-40 object-cover rounded-xl border shadow-sm"
+          />
+        )}
+      </motion.div>
+
+      {/* Description */}
       <motion.textarea
         name="description"
         placeholder="Full Project Description"
@@ -75,9 +152,10 @@ export default function UploadProject() {
         whileFocus={{ scale: 1.02 }}
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.5 }}
+        transition={{ delay: 1.0 }}
       ></motion.textarea>
 
+      {/* Submit */}
       <motion.button
         type="submit"
         className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-3 rounded-xl shadow-md"
