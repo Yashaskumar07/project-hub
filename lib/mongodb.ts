@@ -11,13 +11,20 @@ if (!uri) {
   throw new Error("Please add your MongoDB URI to .env.local");
 }
 
+// Extend NodeJS.Global interface to include our property
+declare global {
+  // This makes sure TypeScript knows about _mongoClientPromise
+  // and avoids using "any"
+  // eslint-disable-next-line no-var
+  var _mongoClientPromise: Promise<MongoClient> | undefined;
+}
+
 if (process.env.NODE_ENV === "development") {
-  // In dev, use global to avoid re-creating clients on hot reloads
-  if (!(global as any)._mongoClientPromise) {
+  if (!global._mongoClientPromise) {
     client = new MongoClient(uri, options);
-    (global as any)._mongoClientPromise = client.connect();
+    global._mongoClientPromise = client.connect();
   }
-  clientPromise = (global as any)._mongoClientPromise;
+  clientPromise = global._mongoClientPromise;
 } else {
   // In production, always create a new client
   client = new MongoClient(uri, options);
@@ -26,5 +33,5 @@ if (process.env.NODE_ENV === "development") {
 
 export async function connectToDB(): Promise<Db> {
   const client = await clientPromise;
-  return client.db(); // ✅ return DB instance
+  return client.db(); // ✅ Returns the default database
 }

@@ -5,16 +5,21 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
+// ✅ Define a type for Project
+interface Project {
+  _id: string;
+  title: string;
+  shortDescription?: string;
+}
+
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<any[]>([]);
-
-const router = useRouter();
-
+  const [projects, setProjects] = useState<Project[]>([]);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchProjects = async () => {
       const res = await fetch("/api/projects");
-      const data = await res.json();
+      const data: Project[] = await res.json(); // ✅ typed response
       setProjects(data);
     };
     fetchProjects();
@@ -53,7 +58,7 @@ const router = useRouter();
           </motion.p>
         )}
 
-        {projects.map((project: any) => (
+        {projects.map((project) => (
           <motion.div
             key={project._id.toString()}
             variants={{
@@ -61,15 +66,17 @@ const router = useRouter();
               visible: { opacity: 1, y: 0 },
             }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            whileHover={{ scale: 1.05, boxShadow: "0px 8px 20px rgba(0,0,0,0.15)" }}
+            whileHover={{
+              scale: 1.05,
+              boxShadow: "0px 8px 20px rgba(0,0,0,0.15)",
+            }}
             whileTap={{ scale: 0.98 }}
           >
             <Link
               href={`/projects/${project._id}`}
               className="block p-5 bg-white rounded-2xl shadow-md hover:bg-blue-50 transition-colors"
             >
-             <h2 className="text-lg font-semibold text-black">{project.title}</h2>
-
+              <h2 className="text-lg font-semibold text-black">{project.title}</h2>
               <p className="text-gray-600 mt-2">{project.shortDescription}</p>
               <span className="text-sm text-blue-600 mt-3 inline-block font-medium">
                 View details →
@@ -78,14 +85,15 @@ const router = useRouter();
           </motion.div>
         ))}
       </motion.div>
+
       <div className="mt-8 flex justify-center">
-      <button
-        onClick={() => router.back()}
-        className="bg-white hover:bg-gray-300 text-gray-800 font-medium px-6 py-2 rounded-lg shadow transition duration-200"
-      >
-        ← Back
-      </button>
-    </div>
+        <button
+          onClick={() => router.back()}
+          className="bg-white hover:bg-gray-300 text-gray-800 font-medium px-6 py-2 rounded-lg shadow transition duration-200"
+        >
+          ← Back
+        </button>
+      </div>
     </div>
   );
 }

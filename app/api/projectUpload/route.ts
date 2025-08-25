@@ -9,19 +9,25 @@ export async function POST(req: Request) {
     // ✅ Parse multipart/form-data
     const formData = await req.formData();
 
-    const title = formData.get("title") as string;
-    const description = formData.get("description") as string;
-    const tags = (formData.get("tags") as string)?.split(",").map(t => t.trim()) || [];
-    const difficulty = formData.get("difficulty") as string;
-    const status = formData.get("status") as string;
-    const github = formData.get("github") as string;
-    const demo = formData.get("demo") as string;
+    const title = formData.get("title");
+    const description = formData.get("description");
+    const tagsRaw = formData.get("tags");
+    const difficulty = formData.get("difficulty");
+    const status = formData.get("status");
+    const github = formData.get("github");
+    const demo = formData.get("demo");
+
+    // ✅ Handle tags safely
+    const tags =
+      typeof tagsRaw === "string"
+        ? tagsRaw.split(",").map((t) => t.trim())
+        : [];
 
     // ✅ Handle image file
-    const file = formData.get("image") as File | null;
+    const file = formData.get("image");
     let imageUrl = "";
 
-    if (file) {
+    if (file instanceof File) {
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
 
@@ -35,8 +41,16 @@ export async function POST(req: Request) {
       imageUrl = `/uploads/${file.name}`;
     }
 
-    if (!title || !description || !difficulty) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    // ✅ Required field check
+    if (
+      typeof title !== "string" ||
+      typeof description !== "string" ||
+      typeof difficulty !== "string"
+    ) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
     }
 
     await connectToDB();
@@ -46,9 +60,9 @@ export async function POST(req: Request) {
       description,
       tags,
       difficulty,
-      status,
-      github,
-      demo,
+      status: typeof status === "string" ? status : undefined,
+      github: typeof github === "string" ? github : undefined,
+      demo: typeof demo === "string" ? demo : undefined,
       image: imageUrl,
     });
 
@@ -56,9 +70,15 @@ export async function POST(req: Request) {
       { message: "Project uploaded successfully", project: newProject },
       { status: 201 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Upload Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json(
+      { error: "An unexpected error occurred" },
+      { status: 500 }
+    );
   }
 }
 
@@ -68,7 +88,13 @@ export async function GET() {
     await connectToDB();
     const projects = await Project.find().sort({ createdAt: -1 });
     return NextResponse.json(projects, { status: 200 });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json(
+      { error: "An unexpected error occurred" },
+      { status: 500 }
+    );
   }
 }

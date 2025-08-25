@@ -20,7 +20,9 @@ export async function GET() {
       isAuthenticated: true,
       user: decoded, // contains id & email
     });
-  } catch (error) {
-    return NextResponse.json({ isAuthenticated: false }, { status: 401 });
-  }
+} catch (error) {
+  console.error("Auth check failed:", error);
+  return NextResponse.json({ isAuthenticated: false }, { status: 401 });
+}
+
 }

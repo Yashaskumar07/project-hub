@@ -2,6 +2,7 @@
 "use client";
 import { useState } from "react";
 import { motion } from "framer-motion";
+import Image from "next/image";
 
 export default function UploadProject() {
   const [form, setForm] = useState({
@@ -133,13 +134,17 @@ export default function UploadProject() {
           onChange={handleImageChange}
           className="w-full border p-3 rounded-xl shadow-sm bg-white"
         />
-        {preview && (
-          <img
-            src={preview}
-            alt="Preview"
-            className="mt-2 w-full h-40 object-cover rounded-xl border shadow-sm"
-          />
-        )}
+        
+{preview && (
+  <div className="mt-2 w-full h-40 relative">
+    <Image
+      src={preview}
+      alt="Preview"
+      fill
+      className="object-cover rounded-xl border shadow-sm"
+    />
+  </div>
+)}
       </motion.div>
 
       {/* Description */}

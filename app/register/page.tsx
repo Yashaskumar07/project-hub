@@ -42,7 +42,7 @@ export default function Register() {
   className="bg-white p-8 rounded-xl shadow-md w-full max-w-md"
 >
   <h2 className="text-2xl font-bold mb-6 text-center text-blue-700">
-    Register for Aushadhi Mitra
+    Register for Project-Hub
   </h2>
 
   <div className="mb-4">

@@ -2,8 +2,16 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { connectToDB } from "@/lib/mongodb";
+import type { WithId, Document } from "mongodb";
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
+
+// ✅ Define a user type
+interface User extends Document {
+  _id: string;
+  email: string;
+  password: string;
+}
 
 export async function POST(req: Request) {
   try {
@@ -19,10 +27,10 @@ export async function POST(req: Request) {
 
     // Connect DB
     const db = await connectToDB();
-    const usersCollection = db.collection("users");
+    const usersCollection = db.collection<User>("users");
 
     // Find user
-    const user = await usersCollection.findOne({ email });
+    const user: WithId<User> | null = await usersCollection.findOne({ email });
     if (!user) {
       return NextResponse.json(
         { error: "Invalid credentials" },
@@ -61,10 +69,16 @@ export async function POST(req: Request) {
     });
 
     return response;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Login error:", error);
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: "Something went wrong", details: error.message },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
-      { error: "Something went wrong", details: error.message },
+      { error: "Something went wrong" },
       { status: 500 }
     );
   }

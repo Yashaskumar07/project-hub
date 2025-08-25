@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 
 interface Project {
   _id: string;
@@ -13,6 +14,48 @@ interface Project {
 }
 
 export default function ProjectDetailsClient({ project }: { project: Project }) {
+  const [bookmarked, setBookmarked] = useState(false);
+
+  // ⚡ later: replace with session.user.id / session.user.email
+  const userId = "12345";
+  const email = "admin@gmail.com";
+
+  // ✅ Check if this project is already bookmarked on mount
+  useEffect(() => {
+    const fetchBookmarkStatus = async () => {
+      try {
+        const res = await fetch(
+          `/api/bookmarks?userId=${userId}&email=${encodeURIComponent(email)}`
+        );
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setBookmarked(data.includes(project._id));
+        }
+      } catch (err) {
+        console.error("Error checking bookmark:", err);
+      }
+    };
+
+    fetchBookmarkStatus();
+  }, [project._id]);
+
+  const handleBookmark = async () => {
+    const method = bookmarked ? "DELETE" : "POST";
+    const res = await fetch("/api/bookmarks", {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, projectId: project._id, email }),
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      setBookmarked(!bookmarked);
+
+      // ✅ trigger global refresh for BookmarksPage
+      window.dispatchEvent(new Event("bookmarksUpdated"));
+    }
+  };
+
   return (
     <motion.div
       className="max-w-2xl mx-auto mt-10 p-6 bg-white rounded-2xl shadow-xl"
@@ -32,14 +75,29 @@ export default function ProjectDetailsClient({ project }: { project: Project }) 
         />
       )}
 
-      <motion.h1
-        className="text-3xl font-bold text-gray-900"
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-      >
-        {project.title}
-      </motion.h1>
+      {/* Title + Bookmark */}
+      <div className="flex items-center justify-between">
+        <motion.h1
+          className="text-3xl font-bold text-gray-900"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+        >
+          {project.title}
+        </motion.h1>
+
+        {/* ✅ Bookmark Button */}
+        <motion.button
+          onClick={handleBookmark}
+          className={`px-3 py-1 rounded-lg shadow text-sm font-medium transition ${
+            bookmarked ? "bg-yellow-400 text-white" : "bg-gray-200 text-gray-800"
+          }`}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+        >
+          {bookmarked ? "★ Bookmarked" : "☆ Bookmark"}
+        </motion.button>
+      </div>
 
       {project.domain && (
         <motion.p

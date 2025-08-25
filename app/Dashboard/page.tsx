@@ -53,8 +53,8 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6 relative">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">📊 Dashboard Overview</h1>
+    <div className="min-h-screen  p-6 relative">
+      <h1 className="text-3xl font-bold text-white mb-6">📊 Dashboard Overview</h1>
 
       {/* Quick Stats Cards */}
       <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-6 mb-10">
