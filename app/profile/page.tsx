@@ -15,33 +15,55 @@ interface Community {
   name: string;
 }
 
+// API response type for joining a community
+interface JoinCommunityResponse {
+  joined?: boolean;
+  error?: string;
+}
+
 export default function ProfilePage() {
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [communities, setCommunities] = useState<Community[]>([]);
 
-  const communities: Community[] = [
-    { _id: "123", name: "AI Enthusiasts" },
-    { _id: "456", name: "Web Developers" },
-  ];
-
-  // ✅ Fetch logged in user
+  // Fetch logged in user
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const email = localStorage.getItem("userEmail"); // saved at login
+        const email = localStorage.getItem("userEmail");
         if (!email) return;
+
         const res = await fetch(`/api/profile?email=${email}`);
         if (!res.ok) throw new Error("Failed to fetch user");
-        const data = await res.json();
+
+        const data: User = await res.json();
         setUser(data);
-      } catch (error) {
-        console.error(error);
+      } catch (err: unknown) {
+        console.error("Error fetching user:", err);
       }
     };
+
     fetchUser();
   }, []);
 
-  // ✅ Join community
+  // Fetch communities from backend
+  useEffect(() => {
+    const fetchCommunities = async () => {
+      try {
+        const res = await fetch("/api/communities");
+        if (!res.ok) throw new Error("Failed to fetch communities");
+
+        const data: Community[] = await res.json();
+        setCommunities(data);
+      } catch (err: unknown) {
+        console.error("Error fetching communities:", err);
+      }
+    };
+
+    fetchCommunities();
+  }, []);
+
+  // Join community
   const handleJoin = async (communityId: string) => {
     if (!user?._id) {
       alert("Please log in first!");
@@ -52,25 +74,31 @@ export default function ProfilePage() {
       const res = await fetch(`/api/communities/${communityId}/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user._id }), // ✅ use real user ID
+        body: JSON.stringify({ userId: user._id }),
       });
 
-      const data = await res.json();
-
-      if (res.ok) {
-        alert(data.message || "Joined community!");
-      } else {
-        alert(data.error || "Something went wrong.");
+      let payload: JoinCommunityResponse;
+      try {
+        payload = (await res.json()) as JoinCommunityResponse;
+      } catch {
+        payload = { error: "Server returned non-JSON response" };
       }
-    } catch (err) {
+
+      if (!res.ok) {
+        console.error("Join failed:", res.status, payload);
+        alert(payload?.error || `Join failed (${res.status})`);
+        return;
+      }
+
+      alert(payload?.joined ? "Joined community!" : "Already a member 👍");
+    } catch (err: unknown) {
       console.error("Error joining community:", err);
-      alert("Failed to join community. Try again later.");
+      alert("Network error while joining community.");
     }
   };
 
   return (
-  <div className="flex min-h-screen w-full bg-gray-100">
-
+    <div className="flex min-h-screen w-full bg-gray-100">
       {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 h-full w-64 bg-blue-700 text-white p-6 flex flex-col transform transition-transform duration-300 z-50 
@@ -83,50 +111,52 @@ export default function ProfilePage() {
           </button>
         </div>
         <nav className="flex flex-col gap-4">
-  <Link href="/Dashboard" className="hover:bg-blue-600 p-2 rounded">
-    📊 Dashboard
-  </Link>
-  <Link href="/projects" className="hover:bg-blue-600 p-2 rounded">
-    🌍 Explore Projects
-  </Link>
-  <Link href="/my-projects" className="hover:bg-blue-600 p-2 rounded">
-    💼 My Projects
-  </Link>
-  <Link href="/upload" className="hover:bg-blue-600 p-2 rounded">
-    ⬆️ Upload Project
-  </Link>
+          <Link href="/Dashboard" className="hover:bg-blue-600 p-2 rounded">
+            📊 Dashboard
+          </Link>
+          <Link href="/projects" className="hover:bg-blue-600 p-2 rounded">
+            🌍 Explore Projects
+          </Link>
+          <Link href="/my-projects" className="hover:bg-blue-600 p-2 rounded">
+            💼 My Projects
+          </Link>
+          <Link href="/upload" className="hover:bg-blue-600 p-2 rounded">
+            ⬆️ Upload Project
+          </Link>
 
-  {/* Communities */}
-  <div className="mt-2">
-    <p className="text-sm font-semibold text-gray-200 mb-1">👥 Communities</p>
-    {communities.map((c) => (
-      <div
-        key={c._id}
-        className="flex justify-between items-center hover:bg-blue-600 p-2 rounded"
-      >
-        <Link href={`/community/${c._id}`} className="flex-1">
-          {c.name}
-        </Link>
-        <button
-          onClick={() => handleJoin(c._id)}
-          className="bg-green-500 text-white px-2 py-1 rounded ml-2 hover:bg-green-600"
-        >
-          Join
-        </button>
-      </div>
-    ))}
-  </div>
+          {/* Communities */}
+          <div className="mt-2">
+            <p className="text-sm font-semibold text-gray-200 mb-1">👥 Communities</p>
+            {communities.length > 0 ? (
+              communities.map((c) => (
+                <div
+                  key={c._id}
+                  className="flex justify-between items-center hover:bg-blue-600 p-2 rounded"
+                >
+                  <Link href={`/community/${c._id}`} className="flex-1">
+                    {c.name}
+                  </Link>
+                  <button
+                    onClick={() => handleJoin(c._id)}
+                    className="bg-green-500 text-white px-2 py-1 rounded ml-2 hover:bg-green-600"
+                  >
+                    Join
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-300 text-sm">No communities available.</p>
+            )}
+          </div>
 
-  
-  <Link href="/bookmarks" className="hover:bg-blue-600 p-2 rounded">
-    ⭐ Bookmarks
-  </Link>
-  
-  <Link href="/logout" className="hover:bg-blue-600 p-2 rounded">
-    🚪 Logout
-  </Link>
-</nav>
+          <Link href="/bookmarks" className="hover:bg-blue-600 p-2 rounded">
+            ⭐ Bookmarks
+          </Link>
 
+          <Link href="/logout" className="hover:bg-blue-600 p-2 rounded">
+            🚪 Logout
+          </Link>
+        </nav>
       </aside>
 
       {/* Main */}
@@ -141,9 +171,7 @@ export default function ProfilePage() {
         <h1 className="text-3xl font-bold text-gray-900">Your Profile</h1>
 
         <div className="mt-6 bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-800">
-            User Information
-          </h2>
+          <h2 className="text-xl font-semibold text-gray-800">User Information</h2>
           {user ? (
             <>
               <p className="mt-2 text-gray-600">

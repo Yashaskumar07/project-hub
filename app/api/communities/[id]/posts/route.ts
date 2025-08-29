@@ -1,53 +1,65 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { connectToDB } from "@/lib/mongodb";
 import Community from "@/models/Community";
 import Post from "@/models/Posts";
+import mongoose from "mongoose";
 
-interface Context {
-  params: {
-    id: string; // communityId
-  };
-}
-
-export async function POST(req: Request, { params }: Context) {
+export async function POST(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> } // ✅ params is a Promise
+) {
   try {
     await connectToDB();
-    const { content, userId } = await req.json();
 
-    const community = await Community.findById(params.id);
+    const { content, userId } = await req.json();
+    const { id: communityId } = await context.params; // await the params promise
+
+    const community = await Community.findById(communityId);
     if (!community) {
       return NextResponse.json({ error: "Community not found" }, { status: 404 });
     }
 
-    // ✅ Only allow members to post
-    if (!community.members.includes(userId)) {
+    // Only allow members to post
+    const isMember = community.members.some(
+      (m: mongoose.Types.ObjectId | string | undefined) => m?.toString() === userId
+    );
+
+    if (!isMember) {
       return NextResponse.json({ error: "Join community to post" }, { status: 403 });
     }
 
     const newPost = new Post({
       content,
       createdBy: userId,
-      community: params.id,
+      community: communityId,
     });
 
     await newPost.save();
     return NextResponse.json(newPost, { status: 201 });
-  } catch (error) {
-    console.error("POST CREATION ERROR:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  } catch (err: unknown) {
+    console.error("POST CREATION ERROR:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: "Internal Server Error", details: message }, { status: 500 });
   }
 }
 
-export async function GET(req: Request, { params }: Context) {
+export async function GET(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> } // ✅ params is a Promise
+) {
   try {
     await connectToDB();
-    const posts = await Post.find({ community: params.id })
+
+    const { id: communityId } = await context.params; // await the params promise
+
+    const posts = await Post.find({ community: communityId })
       .populate("createdBy", "name email")
       .sort({ createdAt: -1 });
 
     return NextResponse.json(posts, { status: 200 });
-  } catch (error) {
-    console.error("FETCH POSTS ERROR:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  } catch (err: unknown) {
+    console.error("FETCH POSTS ERROR:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: "Internal Server Error", details: message }, { status: 500 });
   }
 }

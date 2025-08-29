@@ -10,27 +10,19 @@ interface Project {
   domain?: string;
   github?: string;
   demo?: string;
-  image?: string; // ✅ add image field
+  image?: string;
 }
 
 export default function ProjectDetailsClient({ project }: { project: Project }) {
   const [bookmarked, setBookmarked] = useState(false);
 
-  // ⚡ later: replace with session.user.id / session.user.email
-  const userId = "12345";
-  const email = "admin@gmail.com";
-
   // ✅ Check if this project is already bookmarked on mount
   useEffect(() => {
     const fetchBookmarkStatus = async () => {
       try {
-        const res = await fetch(
-          `/api/bookmarks?userId=${userId}&email=${encodeURIComponent(email)}`
-        );
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          setBookmarked(data.includes(project._id));
-        }
+        const res = await fetch("/api/bookmarks", { cache: "no-store" });
+        const data: Project[] = await res.json();
+        setBookmarked(data.some((p) => p._id === project._id));
       } catch (err) {
         console.error("Error checking bookmark:", err);
       }
@@ -41,18 +33,25 @@ export default function ProjectDetailsClient({ project }: { project: Project }) 
 
   const handleBookmark = async () => {
     const method = bookmarked ? "DELETE" : "POST";
-    const res = await fetch("/api/bookmarks", {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, projectId: project._id, email }),
-    });
 
-    const data = await res.json();
-    if (data.success) {
-      setBookmarked(!bookmarked);
+    try {
+      const res = await fetch("/api/bookmarks", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: project._id }), // ✅ API should read userId from cookies
+      });
 
-      // ✅ trigger global refresh for BookmarksPage
-      window.dispatchEvent(new Event("bookmarksUpdated"));
+      const data = await res.json();
+      console.log("Bookmark API response:", data);
+
+      if (res.ok && data.success) {
+        setBookmarked(!bookmarked);
+        window.dispatchEvent(new Event("bookmarksUpdated")); // 🔄 sync with bookmarks page
+      } else {
+        console.error("Bookmark API error:", data);
+      }
+    } catch (err) {
+      console.error("Error updating bookmark:", err);
     }
   };
 
@@ -63,7 +62,6 @@ export default function ProjectDetailsClient({ project }: { project: Project }) 
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
     >
-      {/* ✅ Image Preview */}
       {project.image && (
         <motion.img
           src={project.image}
@@ -75,7 +73,6 @@ export default function ProjectDetailsClient({ project }: { project: Project }) 
         />
       )}
 
-      {/* Title + Bookmark */}
       <div className="flex items-center justify-between">
         <motion.h1
           className="text-3xl font-bold text-gray-900"
@@ -86,7 +83,6 @@ export default function ProjectDetailsClient({ project }: { project: Project }) 
           {project.title}
         </motion.h1>
 
-        {/* ✅ Bookmark Button */}
         <motion.button
           onClick={handleBookmark}
           className={`px-3 py-1 rounded-lg shadow text-sm font-medium transition ${

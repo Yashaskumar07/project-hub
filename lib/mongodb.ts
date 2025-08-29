@@ -1,4 +1,3 @@
-// lib/mongodb.ts
 import { MongoClient, Db } from "mongodb";
 
 const uri = process.env.MONGODB_URI as string;
@@ -14,8 +13,6 @@ if (!uri) {
 // Extend NodeJS.Global interface to include our property
 declare global {
   // This makes sure TypeScript knows about _mongoClientPromise
-  // and avoids using "any"
-  // eslint-disable-next-line no-var
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 

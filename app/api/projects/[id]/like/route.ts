@@ -1,55 +1,40 @@
-// app/api/projects/[id]/like/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectToDB } from "@/lib/mongodb";
 import Project from "@/models/Project";
-import { Types } from "mongoose";
+import mongoose from "mongoose";
 
-interface Context {
-  params: { id: string };
-}
-
-export async function POST(req: Request, { params }: Context) {
+export async function POST(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     await connectToDB();
+
     const { userId } = await req.json();
+    const { id: projectId } = await context.params;
 
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
+    const project = await Project.findById(projectId);
+    if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+
+    project.likes ??= [];
+
+    const alreadyLiked = project.likes.some(
+      (m: mongoose.Types.ObjectId | string | undefined) => m?.toString() === userId
+    );
+
+    if (!alreadyLiked) {
+      project.likes.push(new mongoose.Types.ObjectId(userId));
+      await project.save();
     }
-
-    const project = await Project.findById(params.id);
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
-
-    // Ensure likes is an array of ObjectIds
-    const likes = project.likes as Types.ObjectId[];
-
-    const alreadyLiked = likes.some((uid) => uid.toString() === userId);
-
-    if (alreadyLiked) {
-      project.likes = likes.filter((uid) => uid.toString() !== userId);
-    } else {
-      project.likes.push(new Types.ObjectId(userId));
-    }
-
-    await project.save();
 
     return NextResponse.json({
-      likes: project.likes.length,
+      success: true,
       liked: !alreadyLiked,
+      likesCount: project.likes.length,
     });
-  } catch (error: unknown) {
-    console.error("LIKE API ERROR:", error);
-    if (error instanceof Error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
-    }
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+  } catch (err: unknown) {
+    console.error("LIKE POST ERROR:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

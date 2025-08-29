@@ -14,15 +14,17 @@ export async function GET() {
       return NextResponse.json({ isAuthenticated: false }, { status: 401 });
     }
 
-    const decoded = jwt.verify(tokenCookie.value, JWT_SECRET);
+    const decoded = jwt.verify(tokenCookie.value, JWT_SECRET) as {
+      id: string;
+      email: string;
+    };
 
     return NextResponse.json({
       isAuthenticated: true,
-      user: decoded, // contains id & email
+      user: decoded,
     });
-} catch (error) {
-  console.error("Auth check failed:", error);
-  return NextResponse.json({ isAuthenticated: false }, { status: 401 });
-}
-
+  } catch (error) {
+    console.error("Auth check failed:", error);
+    return NextResponse.json({ isAuthenticated: false }, { status: 401 });
+  }
 }

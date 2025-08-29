@@ -1,18 +1,13 @@
-// models/Community.ts
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, model, models } from "mongoose";
 
-export interface ICommunity extends Document {
-  name: string;
-  members: string[];
-}
+const CommunitySchema = new Schema(
+  {
+    name: { type: String, required: true },
+    description: { type: String },
+  },
+  { timestamps: true }
+);
 
-const CommunitySchema = new Schema<ICommunity>({
-  name: { type: String, required: true },
-  members: [{ type: String }], // store user IDs
-});
-
-const Community =
-  mongoose.models.Community ||
-  mongoose.model<ICommunity>("Community", CommunitySchema);
+const Community = models.Community || model("Community", CommunitySchema);
 
 export default Community;

@@ -1,33 +1,33 @@
-// app/api/projects/[id]/comment/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectToDB } from "@/lib/mongodb";
 import Project from "@/models/Project";
+import mongoose from "mongoose";
 
-interface Context {
-  params: {
-    id: string;
-  };
-}
-
-export async function POST(req: Request, { params }: Context) {
+export async function POST(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     await connectToDB();
-    const { userId, text } = await req.json();
 
-    const project = await Project.findById(params.id);
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
+    const { commentText, userId } = await req.json();
+    const { id: projectId } = await context.params;
 
-    project.comments.push({ userId, text, createdAt: new Date() });
+    const project = await Project.findById(projectId);
+    if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+
+    project.comments ??= [];
+    project.comments.push({
+      text: commentText,
+      createdBy: new mongoose.Types.ObjectId(userId),
+      createdAt: new Date(),
+    });
+
     await project.save();
-
-    return NextResponse.json({ comments: project.comments }); // ✅ Always return JSON
-  } catch (error) {
-    console.error("COMMENT API ERROR:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ comments: project.comments }, { status: 201 });
+  } catch (err: unknown) {
+    console.error("COMMENT POST ERROR:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
